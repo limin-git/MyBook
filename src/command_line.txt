@@ -1,0 +1,44 @@
+
+
+###########################
+#
+# DEBUG VERSION
+#
+###########################
+
+C:\My Document\Code\C++\MakeSDK\Debug\MakeSDK.exe
+
+MakeSDK clean
+MakeSDK C:\Code\-\TA_BASE C:\Code\-\3001
+MakeSDK C:\Code\-\TA_BASE C:\Code\-\3001 clean
+
+
+###########################
+#
+# RELEASE VERSION
+#
+###########################
+
+"C:\My Document\Code\C++\FindIncludes\Release\FindIncludes.exe"
+
+CD "C:\My Document\Code\C++\FindIncludes\Release"
+FindIncludes C:\Code\3001_TIP_NEW\TA_BASE\code\tools\build\tools.build.Build_Base_Core.sln
+FindIncludes C:\Code\3001_TIP_NEW\TA_BASE\code\transactive\core\corba\core.corba.TA_CorbaUtil.vcproj
+
+//StdAfx
+C:\Code\PchBuild\code\transactive\core\stdafx\core.stdafx.TA_StdAfx.vcproj
+
+//Solution
+C:\Code\3001_TIP_NEW\TA_BASE\code\tools\build\tools.build.Build_Base_Core.sln
+C:\Code\3001_TIP_NEW\TA_BASE\code\tools\build\tools.build.Build_Base_Bus.sln
+C:\Code\3001_TIP_NEW\TA_BASE\code\tools\build\tools.build.Build_Base_App.sln
+
+//Project
+C:\Code\3001_TIP_NEW\TA_BASE\code\transactive\core\database\core.database.TA_DataAccess.vcproj
+C:\Code\3001_TIP_NEW\TA_BASE\code\transactive\core\data_access_interface\system_controller\core.dai.system_controller.TA_SystemControllerDAI.vcproj
+C:\Code\3001_TIP_NEW\TA_BASE\code\transactive\core\data_access_interface\core.dai.TA_DAI.vcproj
+C:\Code\3001_TIP_NEW\TA_BASE\code\transactive\app\security\duty_agent\app.security.duty_agent.DutyAgent.vcproj
+C:\Code\3001_TIP_NEW\TA_BASE\code\transactive\app\notification_service\app.notification_service.NotificationServiceAgent.vcproj
+C:\Code\3001_TIP_NEW\TA_BASE\code\transactive\app\system_control\system_status_agent\app.system_control.system_status_agent.SystemStatusAgent.vcproj
+
+// 
