@@ -367,14 +367,14 @@
 			Name="includes"
 			>
 			<File
+				RelativePath=".\src\command_line.txt"
+				>
+			</File>
+			<File
 				RelativePath=".\src\MyBook.h"
 				>
 			</File>
 		</Filter>
-		<File
-			RelativePath=".\src\command_line.txt"
-			>
-		</File>
 		<File
 			RelativePath=".\src\main.cpp"
 			>

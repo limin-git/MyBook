@@ -33,7 +33,14 @@ void main(int argc, char* argv[])
         {
             if ( 1 == args.size() )
             {
-                mybook.add_books( args[0] );
+                if ( boost::filesystem::is_directory( args[0] ) )
+                {
+                    mybook.add_books( args[0] );
+                }
+                else
+                {
+                    mybook.is_book_exist( args[0], true );
+                }
             }
             else if ( 2 == args.size() )
             {

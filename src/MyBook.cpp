@@ -8,6 +8,11 @@ MyBook::MyBook( const path& p )
       m_file_count( 0 ),
       m_folder_count( 0 )
 {
+    if ( m_path.empty() || false == boost::filesystem::exists( m_path ) )
+    {
+        return;
+    }
+
     std::cout << "正在初始化：" << m_path.string() << " ";
 
     boost::filesystem::recursive_directory_iterator end; // default construction yields past-the-end
@@ -17,7 +22,19 @@ MyBook::MyBook( const path& p )
     {
         if ( false == is_directory( it->status() ) )
         {
-            m_file_count++;
+            std::string filename = it->path().filename().string();
+            std::map<std::string, path>::iterator find_it = m_file_path_map.find( filename );
+
+            if ( find_it == m_file_path_map.end() )
+            {
+                m_file_path_map[filename] = *it;
+                m_file_count++;
+            }
+            else
+            {
+                //std::cout << "文件名重复：" << it->path().string() << " <<==>> " << find_it->second.string() << std::endl;
+            }
+
             continue;
         }
 
@@ -51,21 +68,26 @@ MyBook::MyBook( const path& p )
                 }
             }
 
+            //if ( false == is_valid_path( p ) )
+            //{
+            //    std::cout << "分类错误：" << p.string() << std::endl;
+            //}
+
             //std::cout << p.string() << std::endl;
             //std::cout << p.filename().string() << std::endl;
             std::string n = m.str();
-            std::map<std::string, path>::iterator find_it = m_path_map.find( n );
+            std::map<std::string, path>::iterator find_it = m_class_path_map.find( n );
 
-            if ( find_it == m_path_map.end() )
+            if ( find_it == m_class_path_map.end() )
             {
-                m_path_map[n] = p;
+                m_class_path_map[n] = p;
                 m_folder_count++;
             }
             else
             {
                 if ( find_it->second.filename().string().find( "依世界" ) != std::string::npos && is_parent_sub_folder( find_it->second, p ) )
                 {
-                    m_path_map[n] = p;
+                    m_class_path_map[n] = p;
                 }
                 else
                 {
@@ -80,7 +102,7 @@ MyBook::MyBook( const path& p )
         << "共：" << m_file_count << " 个文件， " << m_folder_count << " 个文件夹。" << std::endl;
 
 #if 0
-    for ( std::map<std::string, path>::iterator it = m_path_map.begin(); it != m_path_map.end(); ++it )
+    for ( std::map<std::string, path>::iterator it = m_class_path_map.begin(); it != m_class_path_map.end(); ++it )
     {
         std::cout << it->first << " : " << it->second << std::endl;
     }
@@ -112,12 +134,59 @@ bool MyBook::is_folder_name( const std::string& folder_name )
 }
 
 
+bool MyBook::is_valid_path( const path& p )
+{
+    if ( p.parent_path() == m_path )
+    {
+        return true;
+    }
+
+    std::string sub_name = p.filename().string();
+    std::string parent_name = p.parent_path().filename().string();
+    boost::smatch m;
+    std::string sub_index;
+    std::string parent_index;
+
+    if ( boost::regex_search( sub_name, m, m_regex ) )
+    {
+        sub_index = m.str();
+    }
+
+    if ( boost::regex_search( parent_name, m, m_regex ) )
+    {
+        parent_index = m.str();
+    }
+
+    return sub_index.substr( 0, parent_index.size() ) == parent_index;
+}
+
+
+bool MyBook::is_book_exist( const path& file_path, bool is_output  )
+{
+    std::string filename = file_path.filename().string();
+
+    std::map<std::string, path>::iterator it = m_file_path_map.find( filename );
+
+    if ( it != m_file_path_map.end() )
+    {
+        if ( true == is_output )
+        {
+            std::cout << it->second.string() << std::endl;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+
 // 
 bool MyBook::create_folder( const std::string& folder_name )
 {
-    std::map<std::string, path>::iterator it = m_path_map.find( folder_name );
+    std::map<std::string, path>::iterator it = m_class_path_map.find( folder_name );
 
-    if ( it != m_path_map.end() )
+    if ( it != m_class_path_map.end() )
     {
         return true;
     }
@@ -132,9 +201,9 @@ bool MyBook::create_folder( const std::string& folder_name )
     for ( size_t i = 0; i < size; ++i )
     {
         std::string n = folder_name.substr( 0, size - i );
-        it = m_path_map.find( n );
+        it = m_class_path_map.find( n );
 
-        if ( it != m_path_map.end() )
+        if ( it != m_class_path_map.end() )
         {
             sub_dirs = folder_name.substr( size - i );
             parent = it->second;
@@ -151,7 +220,7 @@ bool MyBook::create_folder( const std::string& folder_name )
 
     if ( ! boost::filesystem::exists( parent ) )
     {
-        std::cout << "失败，父文件夹不存在：" << parent.string() << std::endl;
+        std::cout << "失败，找不到文件夹：" << parent.string() << std::endl;
         return false;
     }
 
@@ -172,9 +241,9 @@ bool MyBook::create_folder( const std::string& folder_name )
 
         path new_name = path( base_name.string() + sub_dirs.substr(0, i + 1) );
         path new_path = new_parent / new_name;
-        std::map<std::string, path>::iterator find_it = m_path_map.find( new_name.string() );
+        std::map<std::string, path>::iterator find_it = m_class_path_map.find( new_name.string() );
 
-        if ( find_it != m_path_map.end() )
+        if ( find_it != m_class_path_map.end() )
         {
             std::cout << "成功，但新文件夹已存在： " << new_name.string() << std::endl;
             return true;
@@ -186,7 +255,7 @@ bool MyBook::create_folder( const std::string& folder_name )
             return false;
         }
 
-        m_path_map[new_name.string()] = new_path;
+        m_class_path_map[new_name.string()] = new_path;
         new_parent = new_path;
     }
 
@@ -208,20 +277,22 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
         return;
     }
 
-    std::map<std::string, path>::iterator it = m_path_map.find( folder_name );
+    std::map<std::string, path>::iterator it = m_class_path_map.find( folder_name );
 
-    if ( it == m_path_map.end() )
+    if ( it == m_class_path_map.end() )
     {
         if ( false == create_folder( folder_name ) )
         {
+            std::cout << "创建文件夹失败，不能添加新书：" << book_path.string() << std::endl;
             return;
         }
 
-        it = m_path_map.find( folder_name );
+        it = m_class_path_map.find( folder_name );
     }
 
-    if ( it == m_path_map.end() )
+    if ( it == m_class_path_map.end() )
     {
+        std::cout << "找不到文件夹：" << folder_name << std::endl;
         return;
     }
 
@@ -242,6 +313,9 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
         return;
     }
 
+    // update cache
+    m_file_path_map[book_path.filename().string()] = new_book_path;
+    m_class_path_map[folder_name] = new_book_path;
     std::cout << "添加成功：" << new_book_path.string() << std::endl;
 }
 
@@ -257,6 +331,12 @@ void MyBook::add_books( const path& folder )
     if ( ! boost::filesystem::is_directory( folder ) )
     {
         std::cout << "不是文件夹：" << folder << std::endl;
+        return;
+    }
+
+    if ( ! is_folder_name( folder.filename().string() ) )
+    {
+        std::cout << "不符合图书馆分类法：" << folder << std::endl;
         return;
     }
 
