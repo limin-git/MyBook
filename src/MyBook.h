@@ -8,13 +8,15 @@ public:
 
     MyBook( const path& p );
 
-    bool create_sub_directories( const std::string& folder_name );
+    bool create_folder( const std::string& folder_name );
 
     void add_book( const path& book_path, const std::string& folder_name );
+    void add_books( const path& folder );
 
 public:
 
-    static bool is_parent_sub_folder( const path& left, const path& right );
+    bool is_parent_sub_folder( const path& left, const path& right );
+    bool is_folder_name( const std::string& folder_name );
 
 public:
 

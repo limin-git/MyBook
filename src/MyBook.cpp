@@ -8,7 +8,7 @@ MyBook::MyBook( const path& p )
       m_file_count( 0 ),
       m_folder_count( 0 )
 {
-    std::cout << "正在初始化：" << m_path.string();
+    std::cout << "正在初始化：" << m_path.string() << " ";
 
     boost::filesystem::recursive_directory_iterator end; // default construction yields past-the-end
     boost::filesystem::recursive_directory_iterator it( m_path );
@@ -76,13 +76,15 @@ MyBook::MyBook( const path& p )
     }
 
     std::cout
-        << " 完成。" << std::endl
+        << "完成。" << std::endl
         << "共：" << m_file_count << " 个文件， " << m_folder_count << " 个文件夹。" << std::endl;
 
+#if 0
     for ( std::map<std::string, path>::iterator it = m_path_map.begin(); it != m_path_map.end(); ++it )
     {
         std::cout << it->first << " : " << it->second << std::endl;
     }
+#endif
 }
 
 
@@ -104,8 +106,14 @@ bool MyBook::is_parent_sub_folder( const path& parent, const path& sub )
 }
 
 
+bool MyBook::is_folder_name( const std::string& folder_name )
+{
+    return boost::regex_match( folder_name, m_regex );
+}
+
+
 // 
-bool MyBook::create_sub_directories( const std::string& folder_name )
+bool MyBook::create_folder( const std::string& folder_name )
 {
     std::map<std::string, path>::iterator it = m_path_map.find( folder_name );
 
@@ -117,6 +125,7 @@ bool MyBook::create_sub_directories( const std::string& folder_name )
     std::cout << "创建新文件夹：" << folder_name << std::endl;
 
     path parent;
+    path base_name;
     std::string sub_dirs;
     size_t size = folder_name.size();
 
@@ -129,6 +138,7 @@ bool MyBook::create_sub_directories( const std::string& folder_name )
         {
             sub_dirs = folder_name.substr( size - i );
             parent = it->second;
+            base_name = it->first;
             break;
         }
     }
@@ -146,8 +156,7 @@ bool MyBook::create_sub_directories( const std::string& folder_name )
     }
 
     path new_parent = parent;
-    path name = parent.filename();
-    //std::cout << name.string() << std::endl;
+    //std::cout << base_name.string() << std::endl;
 
     for ( size_t i = 0; i < sub_dirs.size(); ++i )
     {
@@ -161,7 +170,7 @@ bool MyBook::create_sub_directories( const std::string& folder_name )
             i = sub_dirs.size();
         }
 
-        path new_name = path( name.string() + sub_dirs.substr(0, i + 1) );
+        path new_name = path( base_name.string() + sub_dirs.substr(0, i + 1) );
         path new_path = new_parent / new_name;
         std::map<std::string, path>::iterator find_it = m_path_map.find( new_name.string() );
 
@@ -189,13 +198,13 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
 {
     if ( ! boost::filesystem::exists( book_path ) )
     {
-        std::cout << "此书不存在：" << book_path.string() << std::endl;
+        std::cout << "找不到：" << book_path.string() << std::endl;
         return;
     }
 
     if ( ! boost::regex_match( folder_name, m_regex ) )
     {
-        std::cout << "文件夹名不符合图书馆分类法："<< folder_name << std::endl;
+        std::cout << "不符合图书馆分类法："<< folder_name << std::endl;
         return;
     }
 
@@ -203,7 +212,7 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
 
     if ( it == m_path_map.end() )
     {
-        if ( false == create_sub_directories( folder_name ) )
+        if ( false == create_folder( folder_name ) )
         {
             return;
         }
@@ -234,4 +243,39 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
     }
 
     std::cout << "添加成功：" << new_book_path.string() << std::endl;
+}
+
+
+void MyBook::add_books( const path& folder )
+{
+    if ( ! boost::filesystem::exists( folder ) )
+    {
+        std::cout << "文件夹不存在：" << folder << std::endl;
+        return;
+    }
+
+    if ( ! boost::filesystem::is_directory( folder ) )
+    {
+        std::cout << "不是文件夹：" << folder << std::endl;
+        return;
+    }
+
+    boost::filesystem::directory_iterator end; // default construction yields past-the-end
+    boost::filesystem::directory_iterator it( folder );
+
+    for ( ; it != end; ++it )
+    {
+        const path& p = *it;
+
+        if ( true == is_directory( it->status() ) )
+        {
+            add_books( p );
+        }
+        else
+        {
+            add_book( p, p.parent_path().filename().string() );
+        }
+    }
+
+    boost::filesystem::remove( folder );
 }
