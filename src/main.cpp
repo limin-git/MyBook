@@ -15,7 +15,7 @@ void main(int argc, char* argv[])
 
     while ( true )
     {
-        std::cout << "添加新书：";
+        std::cout << "添加：";
         std::getline( std::cin, line );
 
         std::vector<std::string> args;
@@ -35,7 +35,7 @@ void main(int argc, char* argv[])
             {
                 if ( boost::filesystem::is_directory( args[0] ) )
                 {
-                    mybook.add_books( args[0] );
+                    mybook.add_folder( args[0] );
                 }
                 else
                 {
@@ -60,6 +60,7 @@ void main(int argc, char* argv[])
         }
         catch ( ... )
         {
+            std::cout << "异常。" << std::endl;
         }
     }
 }

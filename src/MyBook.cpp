@@ -6,111 +6,15 @@ MyBook::MyBook( const path& p )
     : m_path( p ),
       m_regex( "^[-.0-9a-zA-Z]+((：|=)[-.0-9a-zA-Z]+)?" ),
       m_file_count( 0 ),
-      m_folder_count( 0 )
+      m_folder_count( 0 ),
+      m_top( 'A' )
 {
-    if ( m_path.empty() || false == boost::filesystem::exists( m_path ) )
-    {
-        return;
-    }
-
-    std::cout << "正在初始化：" << m_path.string() << " ";
-
-    boost::filesystem::recursive_directory_iterator end; // default construction yields past-the-end
-    boost::filesystem::recursive_directory_iterator it( m_path );
-
-    for ( ; it != end; ++it )
-    {
-        if ( false == is_directory( it->status() ) )
-        {
-            std::string filename = it->path().filename().string();
-            std::map<std::string, path>::iterator find_it = m_file_path_map.find( filename );
-
-            if ( find_it == m_file_path_map.end() )
-            {
-                m_file_path_map[filename] = *it;
-                m_file_count++;
-            }
-            else
-            {
-                //std::cout << "文件名重复：" << it->path().string() << " <<==>> " << find_it->second.string() << std::endl;
-            }
-
-            continue;
-        }
-
-        const path& p = *it;
-        const std::string s = p.filename().string();
-        boost::smatch m;
-
-        if ( boost::regex_search( s, m, m_regex ) )
-        {
-            {
-                // 检查是否为图书馆分类法目录
-                path check = p;
-                bool result = true;
-
-                while ( check != m_path )
-                {
-                    if ( ! boost::regex_search( check.filename().string(), m_regex ) )
-                    {
-                        result = false;
-                        //std::cout << check.string() << std::endl;
-                        break;
-                    }
-
-                    check = check.parent_path();
-                }
-
-                // 不是
-                if ( false == result )
-                {
-                    continue;
-                }
-            }
-
-            //if ( false == is_valid_path( p ) )
-            //{
-            //    std::cout << "分类错误：" << p.string() << std::endl;
-            //}
-
-            //std::cout << p.string() << std::endl;
-            //std::cout << p.filename().string() << std::endl;
-            std::string n = m.str();
-            std::map<std::string, path>::iterator find_it = m_class_path_map.find( n );
-
-            if ( find_it == m_class_path_map.end() )
-            {
-                m_class_path_map[n] = p;
-                m_folder_count++;
-            }
-            else
-            {
-                if ( find_it->second.filename().string().find( "依世界" ) != std::string::npos && is_parent_sub_folder( find_it->second, p ) )
-                {
-                    m_class_path_map[n] = p;
-                }
-                else
-                {
-                    std::cout << "文件夹名相同：" << p.string() << " <<==>> " << find_it->second.string() << std::endl;
-                }
-            }
-        }
-    }
-
-    std::cout
-        << "完成。" << std::endl
-        << "共：" << m_file_count << " 个文件， " << m_folder_count << " 个文件夹。" << std::endl;
-
-#if 0
-    for ( std::map<std::string, path>::iterator it = m_class_path_map.begin(); it != m_class_path_map.end(); ++it )
-    {
-        std::cout << it->first << " : " << it->second << std::endl;
-    }
-#endif
+    m_path_valid = ( false == m_path.empty() && true == boost::filesystem::exists( m_path ) );
+    m_it = boost::filesystem::recursive_directory_iterator( m_path );
 }
 
 
-bool MyBook::is_parent_sub_folder( const path& parent, const path& sub )
+bool MyBook::is_parent_sub_path( const path& parent, const path& sub )
 {
     path p = sub;
 
@@ -277,6 +181,8 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
         return;
     }
 
+    initialize( folder_name );
+
     std::map<std::string, path>::iterator it = m_class_path_map.find( folder_name );
 
     if ( it == m_class_path_map.end() )
@@ -315,12 +221,11 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
 
     // update cache
     m_file_path_map[book_path.filename().string()] = new_book_path;
-    m_class_path_map[folder_name] = new_book_path;
-    std::cout << "添加成功：" << new_book_path.string() << std::endl;
+    std::cout << "成功：" << new_book_path.string() << std::endl;
 }
 
 
-void MyBook::add_books( const path& folder )
+void MyBook::add_folder( const path& folder )
 {
     if ( ! boost::filesystem::exists( folder ) )
     {
@@ -349,7 +254,7 @@ void MyBook::add_books( const path& folder )
 
         if ( true == is_directory( it->status() ) )
         {
-            add_books( p );
+            add_folder( p );
         }
         else
         {
@@ -358,4 +263,110 @@ void MyBook::add_books( const path& folder )
     }
 
     boost::filesystem::remove( folder );
+}
+
+
+void MyBook::initialize( const std::string& folder_name )
+{
+    if ( false == m_path_valid )
+    {
+        return;
+    }
+
+    if ( folder_name.size() && folder_name[0] < m_top )
+    {
+        return;
+    }
+
+    for ( ; m_it != m_end; ++m_it )
+    {
+        if ( false == is_directory( m_it->status() ) )
+        {
+            std::string filename = m_it->path().filename().string();
+            std::map<std::string, path>::iterator find_it = m_file_path_map.find( filename );
+
+            if ( find_it == m_file_path_map.end() )
+            {
+                m_file_path_map[filename] = *m_it;
+                m_file_count++;
+            }
+            else
+            {
+                //std::cout << "文件名重复：" << m_it->path().string() << " <<==>> " << find_it->second.string() << std::endl;
+            }
+
+            continue;
+        }
+
+        const path& p = *m_it;
+        const std::string s = p.filename().string();
+        boost::smatch m;
+
+        if ( boost::regex_search( s, m, m_regex ) )
+        {
+            {
+                // 检查是否为图书馆分类法目录
+                path check = p;
+                bool result = true;
+
+                while ( check != m_path )
+                {
+                    if ( ! boost::regex_search( check.filename().string(), m_regex ) )
+                    {
+                        result = false;
+                        //std::cout << check.string() << std::endl;
+                        break;
+                    }
+
+                    check = check.parent_path();
+                }
+
+                // 不是
+                if ( false == result )
+                {
+                    continue;
+                }
+            }
+
+            //std::cout << p.string() << std::endl;
+            //std::cout << p.filename().string() << std::endl;
+            std::string n = m.str();
+            std::map<std::string, path>::iterator find_it = m_class_path_map.find( n );
+
+            if ( find_it == m_class_path_map.end())
+            {
+                m_class_path_map[n] = p;
+                m_folder_count++;
+            }
+            else
+            {
+                if ( find_it->second.filename().string().find( "依世界" ) != std::string::npos && is_parent_sub_path( find_it->second, p ) )
+                {
+                    m_class_path_map[n] = p;
+                }
+                else
+                {
+                    std::cout << "文件夹名相同：" << p.string() << " <<==>> " << find_it->second.string() << std::endl;
+                }
+            }
+
+            if ( n.size() && m_top != n[0] )
+            {
+                m_top = n[0];
+                std::cout << "分析完成：" << n[0] << std::endl;
+
+                if ( folder_name.size() && folder_name[0] < m_top )
+                {
+                    m_it++;
+                    return;
+                }
+            }
+        }
+    }
+
+    if ( m_it == m_end )
+    {
+        m_top = 'z';
+        std::cout << "初始化完成，共 " << m_file_count << " 个文件，" << m_folder_count << " 个文件夹。" << std::endl;
+    }
 }
