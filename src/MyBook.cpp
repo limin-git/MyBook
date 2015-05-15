@@ -352,8 +352,8 @@ void MyBook::initialize( const std::string& folder_name )
 
             if ( n.size() && m_top != n[0] )
             {
+                std::cout << "分析完成：" << m_top << std::endl;
                 m_top = n[0];
-                std::cout << "分析完成：" << n[0] << std::endl;
 
                 if ( folder_name.size() && folder_name[0] < m_top )
                 {
