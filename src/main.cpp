@@ -18,6 +18,11 @@ void main(int argc, char* argv[])
         std::cout << "Ìí¼Ó£º";
         std::getline( std::cin, line );
 
+        if ( line.empty() )
+        {
+            continue;
+        }
+
         std::vector<std::string> args;
         boost::sregex_iterator it( line.begin(), line.end(), e );
         boost::sregex_iterator end;

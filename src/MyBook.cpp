@@ -68,17 +68,34 @@ bool MyBook::is_valid_path( const path& p )
 bool MyBook::is_book_exist( const path& file_path, bool is_output  )
 {
     std::string filename = file_path.filename().string();
-
     std::map<std::string, path>::iterator it = m_file_path_map.find( filename );
 
     if ( it != m_file_path_map.end() )
     {
         if ( true == is_output )
         {
-            std::cout << it->second.string() << std::endl;
+            boost::system::error_code ec;
+            boost::uintmax_t size = boost::filesystem::file_size( file_path, ec);
+
+            if ( ec )
+            {
+                std::cout << "不能获取文件大小。" << std::endl;
+                std::cout << it->second.string() << std::endl;
+            }
+            else
+            {                
+                std::locale ori = std::cout.imbue( std::locale("chs") );
+                std::cout << ::ceil( size / 1024.0 ) << " KB  " << it->second.string() << std::endl;
+                std::cout.imbue( ori );
+            }
         }
 
         return true;
+    }
+
+    if ( true == is_output )
+    {
+        std::cout << "不存在。" << std::endl;
     }
 
     return false;
@@ -207,7 +224,49 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
     if ( boost::filesystem::exists( new_book_path ) )
     {
         std::cout << "已存在：" << new_book_path.string() << std::endl;
-        return;
+
+        boost::system::error_code ec1, ec2;
+        boost::uintmax_t size_1 = boost::filesystem::file_size( book_path, ec1 );
+        boost::uintmax_t size_2 = boost::filesystem::file_size( new_book_path, ec2 );
+
+        if ( ec1 )
+        {
+            std::cout << "不能获取文件大小：" << book_path << ", 错误码：" << ec1.message();
+            return;
+        }
+
+        if ( ec2 )
+        {
+            std::cout << "不能获取文件大小：" << new_book_path << ", 错误码：" << ec2.message();
+            return;
+        }
+
+        if ( size_1 == size_2 )
+        {
+            std::cout << "大小相同，删除文件：" << book_path.string() << std::endl;
+
+            boost::system::error_code ec;
+            boost::filesystem::remove( book_path );
+
+            if ( ec )
+            {
+                std::cout << "删除文件失败：" << ec.message() << std::endl;
+            }
+
+            return;
+        }
+
+        for ( size_t i = 1; i < 100; ++i )
+        {
+            std::string post_fix = "(" + boost::lexical_cast<std::string>(i) + ")";
+            new_book_path = it->second / book_path.stem() / post_fix / book_path.extension();
+
+            if ( ! boost::filesystem::exists( new_book_path ) )
+            {
+                std::cout << "文件大小不同，重命名为：" << ( book_path.stem() / post_fix / book_path.extension() ).string() << std::endl;
+                break;
+            }
+        }
     }
 
     boost::system::error_code ec;
@@ -352,7 +411,7 @@ void MyBook::initialize( const std::string& folder_name )
 
             if ( n.size() && m_top != n[0] )
             {
-                std::cout << "分析完成：" << m_top << std::endl;
+                std::cout << "索引：" << m_top << std::endl;
                 m_top = n[0];
 
                 if ( folder_name.size() && folder_name[0] < m_top )
@@ -367,6 +426,6 @@ void MyBook::initialize( const std::string& folder_name )
     if ( m_it == m_end )
     {
         m_top = 'z';
-        std::cout << "初始化完成，共 " << m_file_count << " 个文件，" << m_folder_count << " 个文件夹。" << std::endl;
+        std::cout << "索引完成，共 " << m_file_count << " 个文件，" << m_folder_count << " 个文件夹。" << std::endl;
     }
 }
