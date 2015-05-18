@@ -67,6 +67,8 @@ bool MyBook::is_valid_path( const path& p )
 
 bool MyBook::is_book_exist( const path& file_path, bool is_output  )
 {
+    initialize( "Z" );
+
     std::string filename = file_path.filename().string();
     std::map<std::string, path>::iterator it = m_file_path_map.find( filename );
 
@@ -75,7 +77,7 @@ bool MyBook::is_book_exist( const path& file_path, bool is_output  )
         if ( true == is_output )
         {
             boost::system::error_code ec;
-            boost::uintmax_t size = boost::filesystem::file_size( file_path, ec);
+            boost::uintmax_t size = boost::filesystem::file_size( it->second, ec);
 
             if ( ec )
             {
@@ -155,7 +157,7 @@ bool MyBook::create_folder( const std::string& folder_name )
             continue;
         }
 
-        if ( sub_dirs[i] == '-' )
+        if ( sub_dirs[i] == '-' || '=' == sub_dirs[i] )
         {
             i = sub_dirs.size();
         }
@@ -243,7 +245,7 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
 
         if ( size_1 == size_2 )
         {
-            std::cout << "大小相同，删除文件：" << book_path.string() << std::endl;
+            std::cout << "文件大小相同，删除文件：" << book_path.string() << std::endl;
 
             boost::system::error_code ec;
             boost::filesystem::remove( book_path );
@@ -259,11 +261,11 @@ void MyBook::add_book( const path& book_path, const std::string& folder_name )
         for ( size_t i = 1; i < 100; ++i )
         {
             std::string post_fix = "(" + boost::lexical_cast<std::string>(i) + ")";
-            new_book_path = it->second / book_path.stem() / post_fix / book_path.extension();
+            new_book_path = it->second / ( book_path.stem().string() + post_fix + book_path.extension().string() );
 
             if ( ! boost::filesystem::exists( new_book_path ) )
             {
-                std::cout << "文件大小不同，重命名为：" << ( book_path.stem() / post_fix / book_path.extension() ).string() << std::endl;
+                std::cout << "文件大小不同，重命名为：" << new_book_path.filename().string() << std::endl;
                 break;
             }
         }
