@@ -351,7 +351,7 @@
 			Name="src"
 			>
 			<File
-				RelativePath=".\src\MyBook.cpp"
+				RelativePath=".\src\Library.cpp"
 				>
 			</File>
 		</Filter>
@@ -371,7 +371,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\MyBook.h"
+				RelativePath=".\src\Library.h"
 				>
 			</File>
 		</Filter>

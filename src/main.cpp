@@ -1,11 +1,11 @@
 #include "StdAfx.h"
-#include "MyBook.h"
+#include "Library.h"
 
 
 void main(int argc, char* argv[])
 {
-    MyBook mybook(  "D:\\My Book" );
-    //MyBook mybook(  "C:\\Temp" );
+    Library library(  "D:\\My Book" );
+    //Library library(  "C:\\Temp" );
     std::string line;
     static const boost::regex e
     (
@@ -40,22 +40,22 @@ void main(int argc, char* argv[])
             {
                 if ( boost::filesystem::is_directory( args[0] ) )
                 {
-                    mybook.add_folder( args[0] );
+                    library.add_directory( args[0] );
                 }
                 else
                 {
-                    mybook.is_book_exist( args[0], true );
+                    library.is_book_exist( args[0], true );
                 }
             }
             else if ( 2 == args.size() )
             {
-                if ( mybook.is_folder_name( args[0] ) )
+                if ( library.is_clc_folder_name( boost::to_upper_copy(args[0]) ) )
                 {
-                    mybook.add_book( args[1], boost::to_upper_copy(args[0]) );
+                    library.add_book( args[1], boost::to_upper_copy(args[0]) );
                 }
                 else
                 {
-                    mybook.add_book( args[0], boost::to_upper_copy(args[1]) );
+                    library.add_book( args[0], boost::to_upper_copy(args[1]) );
                 }
             }
             else
