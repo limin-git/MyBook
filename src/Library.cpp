@@ -96,7 +96,7 @@ void Library::add_book( const path& book_path, const std::string& folder_name )
     std::cout << "正在移动文件……";
 
     boost::system::error_code ec;
-    boost::filesystem::rename( book_path, new_book_path );
+    boost::filesystem::rename( book_path, new_book_path, ec );
 
     if ( ec )
     {
@@ -269,7 +269,7 @@ void Library::create_index( const char top_class_name )
         {
             if ( false == is_clc_directory(p) )
             {
-                // std::cout << p.string() << std::endl;
+                //std::cout << p.string() << std::endl;
                 continue;
             }
 
@@ -342,11 +342,122 @@ bool Library::is_equal_size( const path& lhs, const path& rhs )
 void Library::remove_path( const path& book_path )
 {
     boost::system::error_code ec;
-    boost::filesystem::remove( book_path );
+    boost::filesystem::remove( book_path, ec );
 
     if ( ec )
     {
         std::cout << "删除：" << book_path.string() << " 失败，错误码：" << ec.message() << std::endl;
+    }
+}
+
+
+void Library::rename_remove_string( const std::string& s, bool is_regex )
+{
+    create_index();
+
+    std::vector<std::map<std::string, path>::iterator> to_be_rename;
+
+    if ( false == is_regex )
+    {
+        for ( std::map<std::string, path>::iterator it = m_file_path_map.begin(); it != m_file_path_map.end(); ++it )
+        {
+            if ( it->first.find( s ) != std::string::npos )
+            {
+                to_be_rename.push_back( it );
+            }
+        }
+    }
+    else
+    {
+        boost::regex e(s);
+
+        for ( std::map<std::string, path>::iterator it = m_file_path_map.begin(); it != m_file_path_map.end(); ++it )
+        {
+            std::string s = path(it->first).stem().string();
+
+            if ( boost::regex_search( s, e ) )
+            {
+                to_be_rename.push_back( it );
+            }
+        }
+    }
+
+    if ( true == to_be_rename.empty() )
+    {
+        return;
+    }
+
+    std::cout
+        << std::endl
+        << "找到 " << to_be_rename.size() << " 个文件：" << std::endl
+        << "---------------" << std::endl;
+
+    std::vector<path> new_paths;
+
+    for ( size_t i = 0; i < to_be_rename.size(); ++i )
+    {
+        std::string old_name = to_be_rename[i]->second.filename().string();
+        std::string new_name = to_be_rename[i]->second.filename().string();
+
+        if ( false == is_regex )
+        {
+            boost::algorithm::replace_all( new_name, s, "" );
+        }
+        else
+        {
+            boost::regex e(s);
+            std::string s = path(old_name).stem().string();
+            new_name = boost::regex_replace( s, e, "" ) + path(old_name).extension().string();
+        }
+
+        const path& old_path = to_be_rename[i]->second;
+        path new_path = to_be_rename[i]->second.parent_path() / new_name;
+
+        if ( boost::filesystem::exists( new_path ) )
+        {
+            for ( size_t i = 1; true; ++i)
+            {
+                std::string stem = path(new_name).stem().string();
+                std::string extension = path(new_name).extension().string();
+                std::string post_fix = "(" + boost::lexical_cast<std::string>(i) + ")";
+                new_name = stem + post_fix + extension;
+                new_path = to_be_rename[i]->second.parent_path() / new_name;
+
+                if ( ! boost::filesystem::exists( new_path ) && new_name != old_name )
+                {
+                    break;
+                }
+            }
+        }
+
+        new_paths.push_back( new_path );
+        std::cout << std::setw(100) << std::setiosflags(std::ios::left) << new_name << old_name << " : " << std::endl;
+    }
+
+    std::cout << std::endl << "y/n?" << std::endl;
+    std::string command;
+    std::cin >> command;
+
+    if ( command != "y" )
+    {
+        return;
+    }
+
+    for ( size_t i = 0; i < to_be_rename.size(); ++i )
+    {
+        boost::system::error_code ec;
+        boost::filesystem::rename( to_be_rename[i]->second, new_paths[i], ec );
+
+        if ( ec )
+        {
+            std::cout << "重命名失败，原因：" << ec.message() << "。" << to_be_rename[i]->second.string() << std::endl;
+        }
+        else
+        {
+            m_file_path_map.erase( to_be_rename[i] );
+            m_file_path_map[ new_paths[i].filename().string() ] = new_paths[i];
+            std::cout << new_paths[i].string() << std::endl;
+        }
     }
 }
 
@@ -419,35 +530,34 @@ bool Library::is_valid_clc_directory( const path& p )
 
 bool Library::is_book_exist( const path& book_path, bool is_output  )
 {
-    create_index( 'Z' );
+    create_index();
 
-    std::map<std::string, path>::iterator it = m_file_path_map.find( book_path.filename().string() );
+    bool is_exist = false;
+    const std::string book_name = book_path.stem().string();
 
-    if ( it != m_file_path_map.end() )
+    for ( std::map<std::string, path>::iterator it = m_file_path_map.begin(); it != m_file_path_map.end(); ++it )
     {
-        if ( true == is_output )
+        if ( it->first.find( book_name ) != std::string::npos )
         {
-            boost::system::error_code ec;
-            boost::uintmax_t size = boost::filesystem::file_size( it->second, ec);
-
-            if ( ec )
+            if ( true == is_output )
             {
-                std::cout << "不能获取文件大小，错误码：" << ec.message() << std::endl;
+                boost::system::error_code ec;
+                boost::uintmax_t size = boost::filesystem::file_size( it->second, ec);
+
+                if ( ec )
+                {
+                    std::cout << "不能获取 " << it->second.string() << " 的大小，错误码：" << ec.message() << std::endl;
+                }
+                else
+                {                
+                    std::locale ori = std::cout.imbue( std::locale("chs") );
+                    std::cout << std::setw(7) << ::ceil( size / 1024.0 ) << " KB  " << it->second.string() << std::endl;
+                    std::cout.imbue( ori );
+                }
             }
-            else
-            {                
-                std::locale ori = std::cout.imbue( std::locale("chs") );
-                std::cout << ::ceil( size / 1024.0 ) << " KB  " << it->second.string() << std::endl;
-                std::cout.imbue( ori );
-            }
+
+            is_exist = true;
         }
-
-        return true;
-    }
-
-    if ( true == is_output )
-    {
-        std::cout << "找不到此书。" << std::endl;
     }
 
     return false;

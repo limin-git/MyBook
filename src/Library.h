@@ -13,8 +13,9 @@ public:
 public:
 
     bool creaate_clc_folder( const std::string& folder_name );
-    void create_index( const char top_class_name );
+    void create_index( const char top_class_name = 'Z' );
     void remove_path( const path& book_path );
+    void rename_remove_string( const std::string& s, bool is_regex = false );
     bool is_parent_path( const path& parent, const path& p );
     bool is_clc_folder_name( const std::string& folder_name );
     bool is_clc_directory( const path& dir );
