@@ -415,10 +415,11 @@ void Library::rename_remove_string( const std::string& s, bool is_regex )
 
         if ( boost::filesystem::exists( new_path ) )
         {
+            std::string stem = path(new_name).stem().string();
+            std::string extension = path(new_name).extension().string();
+
             for ( size_t i = 1; true; ++i)
             {
-                std::string stem = path(new_name).stem().string();
-                std::string extension = path(new_name).extension().string();
                 std::string post_fix = "(" + boost::lexical_cast<std::string>(i) + ")";
                 new_name = stem + post_fix + extension;
                 new_path = to_be_rename[i]->second.parent_path() / new_name;
