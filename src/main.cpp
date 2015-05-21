@@ -58,14 +58,24 @@ void main(int argc, char* argv[])
 
         try
         {
-            if ( 2 == args.size() && "rename" == args[0])
+            if ( 2 <= args.size() && "rename" == args[0])
             {
-                my_library.rename_remove_string( args[1] );
+                if ( 2 == args.size() )
+                {
+                    args.push_back( "" );
+                }
+
+                my_library.rename_remove_string( args[1], args[2] );
                 continue;
             }
-            else if ( 2 == args.size() && "regex_rename" == args[0])
+            else if ( 2 <= args.size() && "regex_rename" == args[0] )
             {
-                my_library.rename_remove_string( args[1], true );
+                if ( 2 == args.size() )
+                {
+                    args.push_back( "" );
+                }
+
+                my_library.rename_regex( args[1], args[2] );
                 continue;
             }
 

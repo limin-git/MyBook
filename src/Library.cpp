@@ -262,10 +262,10 @@ void Library::create_index( const char top_class_name )
         }
 
         const path& p = *m_it;
-        const std::string s = p.filename().string();
+        const std::string filename = p.filename().string();
         boost::smatch m;
 
-        if ( boost::regex_search( s, m, m_regex ) )
+        if ( boost::regex_search( filename, m, m_regex ) )
         {
             if ( false == is_clc_directory(p) )
             {
@@ -351,113 +351,149 @@ void Library::remove_path( const path& book_path )
 }
 
 
-void Library::rename_remove_string( const std::string& s, bool is_regex )
+void Library::rename_remove_string( const std::string& search, const std::string& replace )
 {
     create_index();
 
-    std::vector<std::map<std::string, path>::iterator> to_be_rename;
+    std::vector<std::pair<std::map<std::string, path>::iterator, path> > new_paths;
 
-    if ( false == is_regex )
+    for ( std::map<std::string, path>::iterator it = m_file_path_map.begin(); it != m_file_path_map.end(); ++it )
     {
-        for ( std::map<std::string, path>::iterator it = m_file_path_map.begin(); it != m_file_path_map.end(); ++it )
+        if ( it->first.find( search ) == std::string::npos )
         {
-            if ( it->first.find( s ) != std::string::npos )
-            {
-                to_be_rename.push_back( it );
-            }
+            continue;
         }
-    }
-    else
-    {
-        boost::regex e(s);
 
-        for ( std::map<std::string, path>::iterator it = m_file_path_map.begin(); it != m_file_path_map.end(); ++it )
+        std::string old_name = it->first;
+        std::string new_name = it->first;
+
+        boost::algorithm::replace_all( new_name, search, replace );
+        boost::trim( new_name );
+
+        if ( old_name == new_name )
         {
-            std::string s = path(it->first).stem().string();
-
-            if ( boost::regex_search( s, e ) )
-            {
-                to_be_rename.push_back( it );
-            }
+            continue;
         }
+
+        path new_path = it->second.parent_path() / new_name;
+        new_paths.push_back( std::make_pair( it, new_path ) );
+        std::cout << std::setw(100) << std::setiosflags(std::ios::left) << new_name << "\t" << old_name << std::endl;
     }
 
-    if ( true == to_be_rename.empty() )
+    if ( new_paths.empty() )
     {
         return;
     }
 
-    std::cout
-        << std::endl
-        << "找到 " << to_be_rename.size() << " 个文件：" << std::endl
-        << "---------------" << std::endl;
-
-    std::vector<path> new_paths;
-
-    for ( size_t i = 0; i < to_be_rename.size(); ++i )
-    {
-        std::string old_name = to_be_rename[i]->second.filename().string();
-        std::string new_name = to_be_rename[i]->second.filename().string();
-
-        if ( false == is_regex )
-        {
-            boost::algorithm::replace_all( new_name, s, "" );
-        }
-        else
-        {
-            boost::regex e(s);
-            std::string s = path(old_name).stem().string();
-            new_name = boost::regex_replace( s, e, "" ) + path(old_name).extension().string();
-        }
-
-        const path& old_path = to_be_rename[i]->second;
-        path new_path = to_be_rename[i]->second.parent_path() / new_name;
-
-        if ( boost::filesystem::exists( new_path ) )
-        {
-            std::string stem = path(new_name).stem().string();
-            std::string extension = path(new_name).extension().string();
-
-            for ( size_t i = 1; true; ++i)
-            {
-                std::string post_fix = "(" + boost::lexical_cast<std::string>(i) + ")";
-                new_name = stem + post_fix + extension;
-                new_path = to_be_rename[i]->second.parent_path() / new_name;
-
-                if ( ! boost::filesystem::exists( new_path ) && new_name != old_name )
-                {
-                    break;
-                }
-            }
-        }
-
-        new_paths.push_back( new_path );
-        std::cout << std::setw(100) << std::setiosflags(std::ios::left) << new_name << old_name << " : " << std::endl;
-    }
-
-    std::cout << std::endl << "y/n?" << std::endl;
+    std::cout << "要重命名这 " << new_paths.size() << " 个文件吗（y/n）？" << std::endl;
     std::string command;
     std::cin >> command;
 
-    if ( command != "y" )
+    if ( command != "y" && command != "yes" )
     {
         return;
     }
 
-    for ( size_t i = 0; i < to_be_rename.size(); ++i )
+    for ( size_t i = 0; i < new_paths.size(); ++i )
     {
+        if ( boost::filesystem::exists( new_paths[i].second ) )
+        {
+            if ( is_equal_size( new_paths[i].first->second, new_paths[i].second ) )
+            {
+                remove_path( new_paths[i].first->second );
+                m_file_path_map.erase( new_paths[i].first );
+            }
+
+            continue;
+        }
+
         boost::system::error_code ec;
-        boost::filesystem::rename( to_be_rename[i]->second, new_paths[i], ec );
+        boost::filesystem::rename( new_paths[i].first->second, new_paths[i].second, ec );
 
         if ( ec )
         {
-            std::cout << "重命名失败，原因：" << ec.message() << "。" << to_be_rename[i]->second.string() << std::endl;
+            std::cout << "重命名失败，原因：" << ec.message() << "。" << new_paths[i].first->second.string() << std::endl;
         }
         else
         {
-            m_file_path_map.erase( to_be_rename[i] );
-            m_file_path_map[ new_paths[i].filename().string() ] = new_paths[i];
-            std::cout << new_paths[i].string() << std::endl;
+            m_file_path_map.erase( new_paths[i].first );
+            m_file_path_map[ new_paths[i].second.filename().string() ] = new_paths[i].second;
+            std::cout << new_paths[i].second.string() << std::endl;
+        }
+    }
+}
+
+
+void Library::rename_regex( const std::string& search, const std::string& replace )
+{
+    create_index();
+
+    boost::regex e(search);
+    std::vector<std::pair<std::map<std::string, path>::iterator, path> > new_paths;
+
+    for ( std::map<std::string, path>::iterator it = m_file_path_map.begin(); it != m_file_path_map.end(); ++it )
+    {
+        std::string old_name = it->first;
+        std::string new_name = it->first;
+        std::string stem = it->second.stem().string();
+        std::string extension = it->second.extension().string();
+
+        if ( boost::regex_search( stem, e ) )
+        {
+            new_name = boost::regex_replace( stem, e, replace );
+            boost::trim( new_name );
+            new_name += extension;
+        }
+
+        if ( old_name == new_name )
+        {
+            continue;
+        }
+
+        path new_path = it->second.parent_path() / new_name;
+        new_paths.push_back( std::make_pair( it, new_path ) );
+        std::cout << std::setw(100) << std::setiosflags(std::ios::left) << new_name << "\t" << old_name << std::endl;
+    }
+
+    if ( new_paths.empty() )
+    {
+        return;
+    }
+
+    std::cout << "要重命名这 " << new_paths.size() << " 个文件吗（y/n）？" << std::endl;
+    std::string command;
+    std::cin >> command;
+
+    if ( command != "y" && command != "yes" )
+    {
+        return;
+    }
+
+    for ( size_t i = 0; i < new_paths.size(); ++i )
+    {
+        if ( boost::filesystem::exists( new_paths[i].second ) )
+        {
+            if ( is_equal_size( new_paths[i].first->second, new_paths[i].second ) )
+            {
+                remove_path( new_paths[i].first->second );
+                m_file_path_map.erase( new_paths[i].first );
+            }
+
+            continue;
+        }
+
+        boost::system::error_code ec;
+        boost::filesystem::rename( new_paths[i].first->second, new_paths[i].second, ec );
+
+        if ( ec )
+        {
+            std::cout << "重命名失败，原因：" << ec.message() << "。" << new_paths[i].first->second.string() << std::endl;
+        }
+        else
+        {
+            m_file_path_map.erase( new_paths[i].first );
+            m_file_path_map[ new_paths[i].second.filename().string() ] = new_paths[i].second;
+            std::cout << new_paths[i].second.string() << std::endl;
         }
     }
 }
