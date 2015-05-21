@@ -52,7 +52,7 @@ void Library::add_book( const path& book_path, const std::string& folder_name )
     {
         std::map<std::string, path>::iterator find_it = m_file_path_map.find( book_path.filename().string() );
 
-        if ( find_it != m_file_path_map.end() && find_it->second.parent_path() != it->second  )
+        if ( find_it != m_file_path_map.end() && find_it->second.parent_path() != it->second && find_it->second != book_path )
         {
             std::cout << "已存在，但路径不同：" << find_it->second.string() << std::endl;
         }
@@ -60,14 +60,19 @@ void Library::add_book( const path& book_path, const std::string& folder_name )
 
     path new_book_path = it->second / book_path.filename();
 
+    if ( new_book_path == book_path )
+    {
+        return;
+    }
+
     if ( boost::filesystem::exists( new_book_path ) )
     {
         std::cout << "已存在：" << new_book_path.string() << std::endl;
 
         if ( is_equal_size( book_path, new_book_path ) )
         {
-            std::cout << "大小相同，删除文件：" << book_path.string() << std::endl;
-            remove_path( book_path );
+            std::cout << "大小相同。";
+            remove_path( book_path, true );
             return;
         }
 
@@ -85,8 +90,8 @@ void Library::add_book( const path& book_path, const std::string& folder_name )
             {
                 if ( is_equal_size( book_path, new_book_path ) )
                 {
-                    std::cout << "大小相同，删除文件：" << book_path.string() << std::endl;
-                    remove_path( book_path );
+                    std::cout << "大小相同。";
+                    remove_path( book_path, true );
                     return;
                 }
             }
@@ -317,6 +322,20 @@ void Library::create_index( const char top_class_name )
 }
 
 
+void Library::recreate_index()
+{
+    m_current_top_class = 'A';
+    m_file_count = 0;
+    m_folder_count = 0;
+    m_class_path_map.clear();
+    m_file_path_map.clear();
+    m_path_exist = ( false == m_path.empty() && true == boost::filesystem::exists( m_path ) );
+    m_it = boost::filesystem::recursive_directory_iterator( m_path );
+
+    create_index();
+}
+
+
 bool Library::is_equal_size( const path& lhs, const path& rhs )
 {
     boost::system::error_code ec1, ec2;
@@ -339,14 +358,33 @@ bool Library::is_equal_size( const path& lhs, const path& rhs )
 }
 
 
-void Library::remove_path( const path& book_path )
+void Library::remove_path( const path& book_path, bool is_output )
 {
+    if ( true == is_output )
+    {
+        std::cout << "删除：" << book_path.string();
+    }
+
     boost::system::error_code ec;
     boost::filesystem::remove( book_path, ec );
 
     if ( ec )
     {
-        std::cout << "删除：" << book_path.string() << " 失败，错误码：" << ec.message() << std::endl;
+        std::cout << "\r删除：" << book_path.string() << " 失败，错误码：" << ec.message() << std::endl;
+    }
+    else
+    {
+        if ( true == is_output )
+        {
+            std::cout << std::endl;
+        }
+
+        std::map<std::string, path>::iterator it = m_file_path_map.find( book_path.filename().string() );
+
+        if ( it != m_file_path_map.end() && it->second == book_path )
+        {
+            m_file_path_map.erase( it );
+        }
     }
 }
 
@@ -387,39 +425,11 @@ void Library::rename_remove_string( const std::string& search, const std::string
 
     std::cout << "要重命名这 " << new_paths.size() << " 个文件吗（y/n）？" << std::endl;
     std::string command;
-    std::cin >> command;
+    std::getline( std::cin, command );
 
-    if ( command != "y" && command != "yes" )
+    if ( command == "y" || command == "yes" )
     {
-        return;
-    }
-
-    for ( size_t i = 0; i < new_paths.size(); ++i )
-    {
-        if ( boost::filesystem::exists( new_paths[i].second ) )
-        {
-            if ( is_equal_size( new_paths[i].first->second, new_paths[i].second ) )
-            {
-                remove_path( new_paths[i].first->second );
-                m_file_path_map.erase( new_paths[i].first );
-            }
-
-            continue;
-        }
-
-        boost::system::error_code ec;
-        boost::filesystem::rename( new_paths[i].first->second, new_paths[i].second, ec );
-
-        if ( ec )
-        {
-            std::cout << "重命名失败，原因：" << ec.message() << "。" << new_paths[i].first->second.string() << std::endl;
-        }
-        else
-        {
-            m_file_path_map.erase( new_paths[i].first );
-            m_file_path_map[ new_paths[i].second.filename().string() ] = new_paths[i].second;
-            std::cout << new_paths[i].second.string() << std::endl;
-        }
+        rename_impl( new_paths );
     }
 }
 
@@ -462,20 +472,24 @@ void Library::rename_regex( const std::string& search, const std::string& replac
 
     std::cout << "要重命名这 " << new_paths.size() << " 个文件吗（y/n）？" << std::endl;
     std::string command;
-    std::cin >> command;
+    std::getline( std::cin, command );
 
-    if ( command != "y" && command != "yes" )
+    if ( command == "y" || command == "yes" )
     {
-        return;
+        rename_impl( new_paths );
     }
+}
 
+
+void Library::rename_impl( const std::vector<std::pair<std::map<std::string, path>::iterator, path> >& new_paths )
+{
     for ( size_t i = 0; i < new_paths.size(); ++i )
     {
         if ( boost::filesystem::exists( new_paths[i].second ) )
         {
             if ( is_equal_size( new_paths[i].first->second, new_paths[i].second ) )
             {
-                remove_path( new_paths[i].first->second );
+                remove_path( new_paths[i].first->second, true );
                 m_file_path_map.erase( new_paths[i].first );
             }
 

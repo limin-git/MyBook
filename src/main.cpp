@@ -23,11 +23,11 @@ void main(int argc, char* argv[])
         return;
     }
 
-    Library my_library(p);
+    Library library = p;
     std::cout << p.string () << std::endl;
 
-    //Library my_library(  "D:\\My Book" );
-    //Library my_library(  "C:\\Temp" );
+    //Library library(  "D:\\My Book" );
+    //Library library(  "C:\\Temp" );
     std::string line;
     static const boost::regex e
     (
@@ -58,15 +58,22 @@ void main(int argc, char* argv[])
 
         try
         {
-            if ( 2 <= args.size() && "rename" == args[0])
+            if ( 1 == args.size() && args[0] == "reindex" || args[0] == "recreate index" )
+            {
+                library.recreate_index();
+            }
+            else if ( args.size() == 2 && ( args[0] == "remove" || args[0] == "delete" || args[0] == "del" ) )
+            {
+                library.remove_path( args[1], true );
+            }
+            else if ( 2 <= args.size() && "rename" == args[0])
             {
                 if ( 2 == args.size() )
                 {
                     args.push_back( "" );
                 }
 
-                my_library.rename_remove_string( args[1], args[2] );
-                continue;
+                library.rename_remove_string( args[1], args[2] );
             }
             else if ( 2 <= args.size() && "regex_rename" == args[0] )
             {
@@ -75,30 +82,28 @@ void main(int argc, char* argv[])
                     args.push_back( "" );
                 }
 
-                my_library.rename_regex( args[1], args[2] );
-                continue;
+                library.rename_regex( args[1], args[2] );
             }
-
-            if ( 1 == args.size() )
+            else if ( 1 == args.size() )
             {
                 if ( boost::filesystem::is_directory( args[0] ) )
                 {
-                    my_library.add_directory( args[0] );
+                    library.add_directory( args[0] );
                 }
                 else
                 {
-                    my_library.is_book_exist( args[0], true );
+                    library.is_book_exist( args[0], true );
                 }
             }
             else if ( 2 == args.size() )
             {
-                if ( my_library.is_clc_folder_name( boost::to_upper_copy(args[0]) ) )
+                if ( library.is_clc_folder_name( boost::to_upper_copy(args[0]) ) )
                 {
-                    my_library.add_book( args[1], boost::to_upper_copy(args[0]) );
+                    library.add_book( args[1], boost::to_upper_copy(args[0]) );
                 }
                 else
                 {
-                    my_library.add_book( args[0], boost::to_upper_copy(args[1]) );
+                    library.add_book( args[0], boost::to_upper_copy(args[1]) );
                 }
             }
             else
