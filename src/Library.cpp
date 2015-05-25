@@ -105,7 +105,7 @@ void Library::add_book( const path& book_path, const std::string& folder_name )
 
     if ( ec )
     {
-        std::cout << "\r移动文件失败：" << ec.message() << std::endl;
+        std::cout << "\r移动文件失败：" << ec.value() << ": " << ec.message() << std::endl;
         return;
     }
 
@@ -415,7 +415,7 @@ void Library::rename_remove_string( const std::string& search, const std::string
 
         path new_path = it->second.parent_path() / new_name;
         new_paths.push_back( std::make_pair( it, new_path ) );
-        std::cout << std::setw(100) << std::setiosflags(std::ios::left) << new_name << "\t" << old_name << std::endl;
+        std::cout << std::setw(80) << std::setiosflags(std::ios::left) << new_name << "\t" << old_name << std::endl;
     }
 
     if ( new_paths.empty() )
@@ -602,7 +602,7 @@ bool Library::is_book_exist( const path& book_path, bool is_output  )
                 else
                 {                
                     std::locale ori = std::cout.imbue( std::locale("chs") );
-                    std::cout << std::setw(7) << ::ceil( size / 1024.0 ) << " KB  " << it->second.string() << std::endl;
+                    std::cout << std::setiosflags(std::ios::right) << std::setw(7) << ::ceil( size / 1024.0 ) << " KB  " << it->second.string() << std::endl;
                     std::cout.imbue( ori );
                 }
             }

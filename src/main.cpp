@@ -32,7 +32,7 @@ void main(int argc, char* argv[])
     static const boost::regex e
     (
         "(?x)"
-        "[^\" ]+| \"([^\"]+)\""
+        " [^\" ]+ | \"([^\"]+)\""
     );
 
     while ( true )
